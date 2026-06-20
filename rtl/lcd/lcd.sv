@@ -9,8 +9,12 @@ module lcd #(
 
     input wire [9:0] video_x,
     input wire [9:0] video_y,
+    input wire [9:0] active_width,
+    input wire [9:0] active_height,
+    input wire [9:0] lcd_x_offset,
+    input wire [9:0] lcd_y_offset,
 
-    input wire [5:0] lcd_subpixel_x,
+    input wire [4:0] lcd_subpixel_x,
     input wire [4:0] lcd_subpixel_y,
 
     input wire [1:0] lcd_segment_row,
@@ -43,7 +47,7 @@ module lcd #(
   always_comb begin
     lcd_active = 0;
 
-    if (video_x >= LCD_X_OFFSET && video_x < WIDTH - LCD_X_OFFSET && video_y >= LCD_Y_OFFSET && video_y < HEIGHT - LCD_Y_OFFSET) begin
+    if (video_x >= lcd_x_offset && video_x < active_width - lcd_x_offset && video_y >= lcd_y_offset && video_y <  active_height - lcd_y_offset) begin
       // Horizontal and vertical range of main LCD
       lcd_active = video_data[lcd_segment_row];
     end
