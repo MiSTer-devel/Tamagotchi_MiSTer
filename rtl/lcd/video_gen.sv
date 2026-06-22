@@ -34,7 +34,7 @@ module video_gen (
 );
   
   wire crt_mode = (active_width == 10'd640);
-  wire [9:0] hfront_porch = crt_mode ? 10'd16 : hblank_offset;
+  wire [9:0] hfront_porch = crt_mode ? 10'd48 : hblank_offset;
   wire [9:0] vfront_porch = crt_mode ? 10'd4  : vblank_offset;
 
   wire [9:0] hsync_start = active_width  + hfront_porch;
@@ -43,7 +43,7 @@ module video_gen (
   wire [9:0] max_x = active_width  + hblank_len;
   wire [9:0] max_y = active_height + vblank_len;
 
-  wire [9:0] hsync_len = crt_mode ? 10'd64 : 10'd1;
+  wire [9:0] hsync_len = crt_mode ? 10'd72 : 10'd1;
   wire [9:0] vsync_len = crt_mode ? 10'd3  : 10'd1;
   
   initial begin

@@ -141,7 +141,7 @@ module video #(
       (crt_content_active ? (is_lcd ? background_lcd_with_sprite : background_pixel_with_sprite) : 24'b0) :
       (is_lcd ? background_pixel_with_lcd : background_pixel_with_sprite);
 	
-  assign rgb = show_turbo_ui && ui_active ? ui_rgb : main_rgb;
+  assign rgb = (crt_15k_mode && !crt_content_active) ? 24'b0 : (show_turbo_ui && ui_active ? ui_rgb : main_rgb);
 
   sprites #(
       .WIDTH(WIDTH)
@@ -233,8 +233,8 @@ module video #(
   ui ui (
       .clk(clk),
 
-      .video_fetch_x(crt_15k_mode ? active_fetch_x : source_fetch_x),
-      .video_fetch_y(crt_15k_mode ? active_fetch_y : source_fetch_y),
+      .video_fetch_x(source_fetch_x),
+      .video_fetch_y(source_fetch_y),
 
       // Settings
       .turbo_speed(turbo_speed),
