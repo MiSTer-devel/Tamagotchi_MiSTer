@@ -1,18 +1,19 @@
-module video_gen #(
-    parameter WIDTH = 10'd360,
-    parameter HEIGHT = 10'd360,
-    parameter LCD_PIXEL_SIZE = 5'd11,
-
-    parameter VBLANK_LEN = 10'd132,
-    parameter HBLANK_LEN = 10'd84,
-
-    parameter VBLANK_OFFSET = 10'd5,
-    parameter HBLANK_OFFSET = 10'd5,
-
-    parameter LCD_X_OFFSET = 10'd0,
-    parameter LCD_Y_OFFSET = 10'd0
-) (
+module video_gen (
     input wire clk,
+
+    input wire [9:0] active_width,
+    input wire [9:0] active_height,
+    input wire [4:0] lcd_pixel_size_x,
+    input wire [4:0] lcd_pixel_size_y,
+	 
+    input wire [9:0] vblank_len,
+    input wire [9:0] hblank_len,
+
+    input wire [9:0] vblank_offset,
+    input wire [9:0] hblank_offset,
+
+    input wire [9:0] lcd_x_offset,
+    input wire [9:0] lcd_y_offset,
 
     output reg [7:0] video_addr = 0,
 
@@ -31,16 +32,22 @@ module video_gen #(
 
     output wire de
 );
-  localparam VBLANK_TIME = HEIGHT + VBLANK_OFFSET;
-  localparam HBLANK_TIME = WIDTH + HBLANK_OFFSET;
+  
+  wire crt_mode = (active_width == 10'd640);
+  wire [9:0] hfront_porch = crt_mode ? 10'd48 : hblank_offset;
+  wire [9:0] vfront_porch = crt_mode ? 10'd4  : vblank_offset;
 
-  localparam MAX_X = WIDTH + HBLANK_LEN;
-  localparam MAX_Y = HEIGHT + VBLANK_LEN;
+  wire [9:0] hsync_start = active_width  + hfront_porch;
+  wire [9:0] vsync_start = active_height + vfront_porch;
 
+  wire [9:0] max_x = active_width  + hblank_len;
+  wire [9:0] max_y = active_height + vblank_len;
+
+  wire [9:0] hsync_len = crt_mode ? 10'd72 : 10'd1;
+  wire [9:0] vsync_len = crt_mode ? 10'd3  : 10'd1;
+  
   initial begin
-    $display("VBLANK at: %d, HBLANK at: %d", VBLANK_TIME, HBLANK_TIME);
-    $display("Max x, y: %d, %d", MAX_X, MAX_Y);
-    $display("LCD Centering X: %d, Y: %d", LCD_X_OFFSET, LCD_Y_OFFSET);
+    $display("video_gen runtime-timed build");
   end
 
   reg [4:0] pixel_count_x = 0;
@@ -54,10 +61,10 @@ module video_gen #(
 
   assign lcd_segment_row = lcd_y[1:0];
 
-  assign de = x < WIDTH && y < HEIGHT;
+  assign de = x < active_width && y < active_height;
 
-  assign vblank = y >= HEIGHT;
-  assign hblank = x >= WIDTH;
+  assign vblank = y >= active_height;
+  assign hblank = x >= active_width;
 
   // Map from an LCD X coordinate to the actual column of memory used
   function [5:0] lcd_column_addr(reg [5:0] x_coord);
@@ -117,29 +124,29 @@ module video_gen #(
     reg [3:0] next_lcd_y;
     reg [7:0] temp_video_addr;
 
-    hsync <= 0;
-    vsync <= 0;
-
-    next_x = x + 10'b1;
+    next_x = x + 10'd1;
     next_y = y;
 
-    if (next_y == VBLANK_TIME && next_x == WIDTH + 10'b1) begin
-      // VSync
-      vsync <= 1;
-      lcd_y <= 0;
-      pixel_count_y <= 0;
-    end else if (next_x == HBLANK_TIME) begin
-      // HSync
-      hsync <= 1;
+    if (next_x == max_x) begin
+      next_x = 10'd0;
+      next_y = y + 10'd1;
+
+      if (next_y == max_y) begin
+        next_y = 10'd0;
+      end
+    end
+
+    hsync <= (next_x >= hsync_start) && (next_x < (hsync_start + hsync_len));
+    vsync <= (next_y >= vsync_start) && (next_y < (vsync_start + vsync_len));
+
+    if (next_x == hsync_start) begin
       lcd_x <= 0;
       pixel_count_x <= 0;
-    end else if (next_x == MAX_X) begin
-      next_x = 10'h0;
-      next_y = y + 10'b1;
+    end
 
-      if (next_y == MAX_Y) begin
-        next_y = 10'h0;
-      end
+    if ((next_y == vsync_start) && (next_x == 10'd0)) begin
+      lcd_y <= 0;
+      pixel_count_y <= 0;
     end
 
     x <= next_x;
@@ -147,10 +154,10 @@ module video_gen #(
     next_lcd_x = lcd_x;
     next_lcd_y = lcd_y;
 
-    if (next_x >= LCD_X_OFFSET && next_x < WIDTH - LCD_X_OFFSET && next_y >= LCD_Y_OFFSET && next_y < HEIGHT - LCD_Y_OFFSET) begin
+    if (next_x >= lcd_x_offset && next_x < active_width - lcd_x_offset && next_y >= lcd_y_offset && next_y < active_height - lcd_y_offset) begin
       pixel_count_x <= pixel_count_x + 5'b1;
 
-      if (pixel_count_x == LCD_PIXEL_SIZE - 5'b1) begin
+      if (pixel_count_x == lcd_pixel_size_x - 5'b1) begin
         // End of this pixel horizontally
         pixel_count_x <= 0;
 
@@ -162,7 +169,7 @@ module video_gen #(
 
           pixel_count_y <= pixel_count_y + 5'b1;
 
-          if (pixel_count_y == LCD_PIXEL_SIZE - 5'b1) begin
+          if (pixel_count_y == lcd_pixel_size_y - 5'b1) begin
             // End of this pixel vertically
             pixel_count_y <= 0;
 

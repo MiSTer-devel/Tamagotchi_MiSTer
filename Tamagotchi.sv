@@ -105,6 +105,7 @@ module emu (
     "-;",
 
     "O[8:7],LCD Type,Sep. Pixels w/BG,Sep. Pixels wo/BG,Solid Pixels;",
+    "O[9],Video Mode,Digital,Analog;",
     "-;",
 
     "T[0],Reset (Will delete Tama);",
@@ -148,6 +149,7 @@ module emu (
   wire suppress_turbo_after_activation = ~status[6];
 
   wire [1:0] lcd_mode = status[8:7];
+  wire crt_15k_mode = status[9];
 
   wire [1:0] ss_slot_menu = status[38:37];
   wire [1:0] ss_osd_save_load = status[29:28];
@@ -519,6 +521,8 @@ module emu (
 
   video video (
       .clk(clk_vid_13_107),
+		
+      .crt_15k_mode(crt_15k_mode),
 
       .video_addr(video_addr),
       .video_data(video_data),
